@@ -1,0 +1,3 @@
+/home/tian14098/Desktop/check_opencv_work/CMakeFiles/main.dir
+/home/tian14098/Desktop/check_opencv_work/CMakeFiles/edit_cache.dir
+/home/tian14098/Desktop/check_opencv_work/CMakeFiles/rebuild_cache.dir
