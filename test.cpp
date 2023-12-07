@@ -5,11 +5,10 @@
 
 using json = nlohmann::json;
 
-
-
 class ROIExtractor {
 public:
     cv::Mat extractROI(const cv::Mat& inputImage, const std::string& jsonFilePath, const std::string& roiName) {
+        // Parse JSON file to get ROI points
         std::vector<std::vector<cv::Point>> zones = parseJSON(jsonFilePath, roiName);
         std::cout << "Size of zones:" << zones.size() << std::endl;
         // Check if there are enough zones
@@ -36,102 +35,75 @@ public:
 
 private:
     std::vector<std::vector<cv::Point>> parseJSON(const std::string& jsonFilePath, const std::string& roiName) {
-    std::ifstream inputFile(jsonFilePath);
-    if (!inputFile.is_open()) {
-        std::cerr << "Error: Unable to open JSON file." << std::endl;
-        return {};
-    }
+        std::ifstream inputFile(jsonFilePath);
+        if (!inputFile.is_open()) {
+            std::cerr << "Error: Unable to open JSON file." << std::endl;
+            return {};
+        }
 
-    json jsonData;
-    inputFile >> jsonData;
+        json jsonData;
+        inputFile >> jsonData;
 
-    std::cout<< "jsonFormat: " << jsonData << std::endl;
-    std::vector<std::vector<cv::Point>> zones;
+        std::vector<std::vector<cv::Point>> zones;
+        if (jsonData.find(roiName) != jsonData.end()) {
+            auto roiData = jsonData[roiName];
 
-    if (jsonData.find(roiName) != jsonData.end()) {
-        auto roiData = jsonData[roiName];
-
-        for (auto& colorData : roiData.items()) {
-            auto colorPoints = colorData.value();
-            std::vector<cv::Point> points;
-
-            for (const auto& point : colorPoints) {
-                int x = point[0];
-                int y = point[1];
-                points.emplace_back(x, y);
+            for (auto& colorData : roiData.items()) {
+                auto colorPoints = colorData.value();
+                std::vector<cv::Point> points;
+                for (const auto& point : colorPoints) {
+                    int x = point[0];
+                    int y = point[1];
+                    points.emplace_back(x, y);
                 }
-
                 zones.push_back(points);
             }
         }
 
         return zones;
     }
-
 };
 
-// Update version
-// Auto select first element in json file as default
-// Advoid error, can read element or read element not enough points
-std::string getDefaultRoiName(const std::string& jsonFilePath) {
-    std::ifstream inputFile(jsonFilePath);
-    if (!inputFile.is_open()) {
-        std::cerr << "Error: Unable to open JSON file." << std::endl;
-        return "";
-    }
-
-    json jsonData;
-    inputFile >> jsonData;
-
-    if (jsonData.size() > 0) {
-        auto firstRoi = jsonData.begin();
-        return firstRoi.key();
-    }
-
-    return "";
-}
-
-int main() {
-    std::string jsonFilePath = "/home/tian14098/Desktop/check_opencv_work/roi.json";
-    // Extract the first ROI name from JSON
-    std::string defaultRoiName = getDefaultRoiName(jsonFilePath);
+void drawZones(const std::string& jsonFilePath, const std::string& roiName) {
+    // Example usage
     cv::Mat img = cv::imread("/home/tian14098/Desktop/check_opencv_work/large_img_test.png");
 
     if (img.empty()) {
         std::cerr << "Error: Could not read the image." << std::endl;
-        return -1;
+        return;
     }
 
     ROIExtractor roiExtractor;
 
-    // Extract ROI using default ROI name from JSON file
-    cv::Mat roi = roiExtractor.extractROI(img, jsonFilePath, defaultRoiName);
+    // Extract ROI using zones from JSON file
+    cv::Mat roi = roiExtractor.extractROI(img, jsonFilePath, roiName);
 
     // Display the original image and the extracted ROI
     cv::imshow("Original Image", img);
     cv::imshow("ROI", roi);
+    cv::waitKey(0);
+}
+
+int main() {
+    // Provide the path to your JSON file
+    std::string jsonFilePath = "/home/tian14098/Desktop/check_opencv_work/roi.json";
 
     // Loop to handle keyboard events
     while (true) {
+        // Wait for a key event
         int key = cv::waitKey(0);
-        if (key == 27) { // Use esc to exit
+
+        // Exit loop if 'Esc' is pressed
+        if (key == 27) {
             break;
         }
 
         // Convert the pressed key to a string
         std::string roiName = std::to_string(key - '0');
 
-        // Use default ROI name if no valid key pressed
-        if (roiName.empty() || roiName == "-") {
-            roiName = defaultRoiName;
-        }
-
-        // Extract and display the ROI based on the pressed key
-        cv::Mat roi = roiExtractor.extractROI(img, jsonFilePath, roiName);
-        cv::imshow("ROI", roi);
+        // Draw zones based on keypress
+        drawZones(jsonFilePath, roiName);
     }
 
     return 0;
 }
-
-
